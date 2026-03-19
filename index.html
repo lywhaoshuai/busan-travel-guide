@@ -65,8 +65,6 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
-            position: sticky;
-            top: 0;
         }
         
         .sidebar-header h1 {
@@ -346,17 +344,20 @@
         @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
-                grid-template-rows: 30vh 1fr;
+                grid-template-rows: 30vh 70vh;
             }
             
             .sidebar {
                 order: 2;
-                height: 70vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
             }
             
             .map-container {
                 order: 1;
-                position: relative;
+                position: sticky;
+                top: 0;
+                height: 30vh;
             }
             
             #map {
