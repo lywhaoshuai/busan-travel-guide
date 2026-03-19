@@ -7,6 +7,7 @@
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.locatecontrol/0.79.0/L.Control.Locate.min.css" />
     
     <style>
         * {
@@ -26,6 +27,30 @@
             grid-template-columns: 400px 1fr;
             height: 100vh;
             overflow: hidden;
+        }
+        
+        /* 移动端地图控制按钮 */
+        .mobile-map-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            cursor: pointer;
+        }
+        
+        .mobile-map-toggle.show {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         /* 左侧行程面板 */
@@ -321,26 +346,115 @@
         @media (max-width: 768px) {
             .container {
                 grid-template-columns: 1fr;
-                grid-template-rows: 1fr 1fr;
+                grid-template-rows: 60vh 1fr;
             }
             
             .sidebar {
                 order: 2;
+                height: 40vh;
             }
             
             .map-container {
                 order: 1;
+                position: relative;
             }
             
             #map {
-                height: 50vh;
+                height: 60vh;
             }
             
             .map-overlay {
                 top: 10px;
                 right: 10px;
-                max-width: 200px;
+                max-width: 180px;
                 padding: 10px;
+                font-size: 11px;
+            }
+            
+            .sidebar-header h1 {
+                font-size: 18px;
+            }
+            
+            .sidebar-header p {
+                font-size: 12px;
+            }
+            
+            .total-cost {
+                margin: 10px;
+                padding: 10px;
+            }
+            
+            .total-cost .amount {
+                font-size: 18px;
+            }
+            
+            .timeline {
+                padding: 10px;
+            }
+            
+            .timeline-item {
+                padding-left: 25px;
+                padding-bottom: 20px;
+            }
+            
+            .timeline-item h3 {
+                font-size: 14px;
+            }
+            
+            .timeline-item p {
+                font-size: 12px;
+            }
+            
+            .address-box {
+                font-size: 11px;
+                padding: 8px;
+            }
+            
+            .transport-info {
+                grid-template-columns: 1fr;
+            }
+            
+            .cafe-list {
+                font-size: 11px;
+            }
+            
+            /* 移动端地图全屏控制 */
+            .map-container.fullscreen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 3000;
+            }
+            
+            .map-container.fullscreen #map {
+                height: 100vh;
+            }
+            
+            .mobile-map-toggle {
+                display: flex;
+            }
+            
+            .close-map-btn {
+                display: block !important;
+                position: fixed;
+                top: 15px;
+                right: 15px;
+                background: white;
+                color: #333;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 30px;
+                font-size: 14px;
+                font-weight: 600;
+                box-shadow: 0 2px 15px rgba(0,0,0,0.2);
+                z-index: 3001;
+                cursor: pointer;
+            }
+            
+            .close-map-btn.hide {
+                display: none !important;
             }
         }
         
@@ -541,8 +655,10 @@
         </div>
         
         <!-- 右侧地图 -->
-        <div class="map-container">
+        <div class="map-container" id="mapContainer">
             <div id="map"></div>
+            
+            <button class="close-map-btn hide" onclick="toggleMobileMap()">✕ 关闭地图</button>
             
             <div class="map-overlay">
                 <h3>🗺️ 图例</h3>
@@ -566,17 +682,30 @@
         </div>
     </div>
     
+    <!-- 移动端地图切换按钮 -->
+    <button class="mobile-map-toggle" onclick="toggleMobileMap()">
+        🗺️ 全屏地图
+    </button>
+    
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.locatecontrol/0.79.0/L.Control.Locate.min.js"></script>
     
     <script>
         // 初始化地图（以釜山为中心）
-        const map = L.map('map').setView([35.1200, 129.0200], 11);
+        const map = L.map('map', {
+            zoomControl: false  // 先禁用默认缩放控制，稍后添加到右下角
+        }).setView([35.1200, 129.0200], 11);
         
         // 添加 OpenStreetMap 底图
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors',
             maxZoom: 18
+        }).addTo(map);
+        
+        // 添加缩放控制到右下角
+        L.control.zoom({
+            position: 'bottomright'
         }).addTo(map);
         
         // 自定义图标
@@ -705,6 +834,45 @@
                 duration: 1
             });
         }, 500);
+        
+        // 移动端地图全屏切换
+        function toggleMobileMap() {
+            const mapContainer = document.getElementById('mapContainer');
+            const closeBtn = document.querySelector('.close-map-btn');
+            const toggleBtn = document.querySelector('.mobile-map-toggle');
+            
+            mapContainer.classList.toggle('fullscreen');
+            closeBtn.classList.toggle('hide');
+            
+            if (mapContainer.classList.contains('fullscreen')) {
+                toggleBtn.style.display = 'none';
+                // 全屏时更新地图尺寸
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 300);
+            } else {
+                toggleBtn.style.display = 'flex';
+            }
+        }
+        
+        // 检测移动设备
+        function isMobile() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        
+        // 移动设备优化 - 添加定位按钮
+        if (isMobile()) {
+            L.control.locate({
+                position: 'bottomright',
+                strings: {
+                    title: "定位我的位置"
+                },
+                drawMarker: true,
+                flyTo: true,
+                returnToPrevBounds: true,
+                keepCurrentZoomLevel: false
+            }).addTo(map);
+        }
     </script>
 </body>
 </html>
