@@ -343,25 +343,30 @@
         /* 移动端适配 */
         @media (max-width: 768px) {
             .container {
-                grid-template-columns: 1fr;
-                grid-template-rows: 30vh 70vh;
-            }
-            
-            .sidebar {
-                order: 2;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                overflow: hidden;
             }
             
             .map-container {
-                order: 1;
+                flex: 0 0 30vh;
                 position: sticky;
                 top: 0;
-                height: 30vh;
+                z-index: 1000;
+                order: 1;
             }
             
             #map {
                 height: 30vh;
+            }
+            
+            .sidebar {
+                flex: 1;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+                order: 2;
+                height: 70vh;
             }
             
             .map-overlay {
