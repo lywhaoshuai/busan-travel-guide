@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📅 釜山旅行攻略 - 周六行程</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        /* 左侧行程面板 */
+        .sidebar {
+            background: white;
+            overflow-y: auto;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .sidebar-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            position: sticky;
+            top: 0;
+        }
+        
+        .sidebar-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        
+        .sidebar-header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .exchange-rate {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        
+        .timeline {
+            padding: 20px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-left: 30px;
+            padding-bottom: 30px;
+            border-left: 3px solid #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .timeline-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .timeline-item.active {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            border-radius: 12px;
+            padding: 15px 20px 15px 30px;
+            margin: -15px -20px 15px -20px;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -10px;
+            top: 0;
+            width: 17px;
+            height: 17px;
+            background: #667eea;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        
+        .timeline-item.cafe::before {
+            background: #f093fb;
+        }
+        
+        .time-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .timeline-item h3 {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-item p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .address-box {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        .address-box .kr {
+            color: #667eea;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .copy-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            margin-top: 5px;
+            transition: background 0.3s;
+        }
+        
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+        
+        .transport-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .transport-card {
+            background: #f0f4ff;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+        
+        .transport-card.taxi {
+            background: #fff3e0;
+        }
+        
+        .transport-card.public {
+            background: #e3f2fd;
+        }
+        
+        .transport-card strong {
+            display: block;
+            margin-bottom: 3px;
+        }
+        
+        .cafe-list {
+            margin-top: 10px;
+            padding-left: 10px;
+        }
+        
+        .cafe-item {
+            font-size: 12px;
+            padding: 6px 0;
+            border-bottom: 1px dashed #eee;
+            cursor: pointer;
+        }
+        
+        .cafe-item:hover {
+            color: #667eea;
+        }
+        
+        .cafe-item:last-child {
+            border-bottom: none;
+        }
+        
+        /* 右侧地图 */
+        .map-container {
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100vh;
+        }
+        
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-width: 280px;
+        }
+        
+        .map-overlay h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .legend-dot.main {
+            background: #667eea;
+        }
+        
+        .legend-dot.cafe {
+            background: #f093fb;
+        }
+        
+        .legend-dot.airport {
+            background: #4ecdc4;
+        }
+        
+        /* 自定义标记样式 */
+        .custom-marker {
+            background: #667eea;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        
+        .custom-marker.cafe {
+            background: #f093fb;
+        }
+        
+        .custom-marker.airport {
+            background: #4ecdc4;
+        }
+        
+        /* 弹窗样式 */
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+        }
+        
+        .leaflet-popup-content {
+            margin: 0;
+            width: 280px !important;
+        }
+        
+        .popup-content {
+            padding: 15px;
+        }
+        
+        .popup-content h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .popup-content p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .popup-address {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 12px;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+            
+            .map-container {
+                order: 1;
+            }
+            
+            #map {
+                height: 50vh;
+            }
+            
+            .map-overlay {
+                top: 10px;
+                right: 10px;
+                max-width: 200px;
+                padding: 10px;
+            }
+        }
+        
+        /* 总费用提示 */
+        .total-cost {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 15px 20px;
+            margin: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .total-cost h4 {
+            font-size: 14px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+        
+        .total-cost .amount {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧行程面板 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1>📅 釜山周六行程</h1>
+                <p>2026 年 3 月 19 日 · 全程打车约 118,000 韩元</p>
+                <div class="exchange-rate">
+                    💱 汇率：1 韩元 ≈ 0.0046 元
+                </div>
+            </div>
+            
+            <div class="total-cost">
+                <h4>💰 预估交通总费用</h4>
+                <div class="amount">118,000 韩元 / 543 元</div>
+            </div>
+            
+            <div class="timeline">
+                <!-- 行程 1 -->
+                <div class="timeline-item" data-lat="35.1796" data-lng="128.9330" data-index="0">
+                    <span class="time-badge">✈️ 11:30</span>
+                    <h3>金海机场 → 新世界 Centum City</h3>
+                    <p>放行李</p>
+                    <div class="address-box">
+                        <strong>📍 新世界百货 Centum City 店</strong>
+                        <div class="kr">신세계백화점 센텀시티점</div>
+                        <div>부산광역시 해운대구 센텀남대로 35</div>
+                        <button class="copy-btn" onclick="copyAddress('부산광역시 해운대구 센텀남대로 35')">📋 复制地址</button>
+                    </div>
+                    <div class="transport-info">
+                        <div class="transport-card taxi">
+                            <strong>🚗 打车</strong>
+                            30-35 分钟 | 28,000₩
+                        </div>
+                        <div class="transport-card public">
+                            <strong>🚇 地铁</strong>
+                            60-70 分钟 | 1,800₩
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 行程 2 -->
+                <div class="timeline-item" data-lat="35.0947" data-lng="129.0258" data-index="1">
+                    <span class="time-badge">🎨 13:00</span>
+                    <h3>新世界 → 甘川文化村</h3>
+                    <p>游玩：14:00–15:30</p>
+                    <div class="address-box">
+                        <strong>📍 甘川文化村</strong>
+                        <div class="kr">감천문화마을</div>
+                        <div>부산광역시 사하구 감내 2 로 203</div>
+                        <button class="copy-btn" onclick="copyAddress('부산광역시 사하구 감내 2 로 203')">📋 复制地址</button>
+                    </div>
+                    <div class="transport-info">
+                        <div class="transport-card taxi">
+                            <strong>🚗 打车</strong>
+                            35-40 分钟 | 32,000₩
+                        </div>
+                        <div class="transport-card public">
+                            <strong>🚇 地铁 + 小巴</strong>
+                            65-75 分钟 | 2,700₩
+                        </div>
+                    </div>
+                    
+                    <div class="cafe-list">
+                        <strong>☕ 推荐咖啡厅：</strong>
+                        <div class="cafe-item" data-lat="35.0940" data-lng="129.0250">
+                            🏷️ Cafe 383（露台俯瞰彩色村落 + 海景）
+                        </div>
+                        <div class="cafe-item" data-lat="35.0945" data-lng="129.0255">
+                            🏷️ 天空花园（全景窗，ins 风）
+                        </div>
+                        <div class="cafe-item" data-lat="35.0938" data-lng="129.0248">
+                            🏷️ Coffee It House（粉色建筑）
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 行程 3 -->
+                <div class="timeline-item" data-lat="35.1000" data-lng="129.0350" data-index="2">
+                    <span class="time-badge">🌸 15:30</span>
+                    <h3>甘川 → 南浦洞樱花街</h3>
+                    <p>停留：15:50–16:40</p>
+                    <div class="address-box">
+                        <strong>📍 南浦洞樱花街</strong>
+                        <div class="kr">남포동 벚꽃거리（광복로）</div>
+                        <div>부산 중구 광복동</div>
+                        <button class="copy-btn" onclick="copyAddress('부산 중구 광복동')">📋 复制地址</button>
+                    </div>
+                    <div class="transport-info">
+                        <div class="transport-card taxi">
+                            <strong>🚗 打车</strong>
+                            15-20 分钟 | 15,000₩
+                        </div>
+                        <div class="transport-card public">
+                            <strong>🚇 地铁</strong>
+                            35-40 分钟 | 1,600₩
+                        </div>
+                    </div>
+                    
+                    <div class="cafe-list">
+                        <strong>☕ 推荐咖啡厅：</strong>
+                        <div class="cafe-item" data-lat="35.1005" data-lng="129.0355">
+                            🏷️ Cafe Layered（工业风 + 樱花窗）
+                        </div>
+                        <div class="cafe-item" data-lat="35.1002" data-lng="129.0348">
+                            🏷️ Cafe Moment（安静小众）
+                        </div>
+                        <div class="cafe-item" data-lat="35.0998" data-lng="129.0360">
+                            🏷️ 75 广场海景咖啡
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 行程 4 -->
+                <div class="timeline-item" data-lat="35.0850" data-lng="129.0580" data-index="3">
+                    <span class="time-badge">🌅 16:40</span>
+                    <h3>南浦 → 白浅滩文化村</h3>
+                    <p>停留：17:00–18:00（日落必去）</p>
+                    <div class="address-box">
+                        <strong>📍 白浅滩文化村</strong>
+                        <div class="kr">해운대 백사장 문화마을</div>
+                        <div>부산광역시 영도구 영선동 4 가 605-3</div>
+                        <button class="copy-btn" onclick="copyAddress('부산광역시 영도구 영선동 4 가 605-3')">📋 复制地址</button>
+                    </div>
+                    <div class="transport-info">
+                        <div class="transport-card taxi">
+                            <strong>🚗 打车</strong>
+                            10-15 分钟 | 10,000₩
+                        </div>
+                        <div class="transport-card public">
+                            <strong>🚌 公交</strong>
+                            20 分钟 | 1,200₩
+                        </div>
+                    </div>
+                    
+                    <div class="cafe-list">
+                        <strong>☕ 推荐咖啡厅：</strong>
+                        <div class="cafe-item" data-lat="35.0855" data-lng="129.0585">
+                            🏷️ Having Moment（落地窗无敌海景）
+                        </div>
+                        <div class="cafe-item" data-lat="35.0858" data-lng="129.0588">
+                            🏷️ Ondata（3 楼露台看海）
+                        </div>
+                        <div class="cafe-item" data-lat="35.0852" data-lng="129.0582">
+                            🏷️ 足浴咖啡（边泡脚边看日落）
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 行程 5 -->
+                <div class="timeline-item" data-lat="35.1796" data-lng="128.9330" data-index="4">
+                    <span class="time-badge">🏨 18:00</span>
+                    <h3>白浅滩 → 新世界 Centum City</h3>
+                    <p>返程 · 完美卡点</p>
+                    <div class="address-box">
+                        <strong>📍 新世界百货 Centum City 店</strong>
+                        <div class="kr">신세계백화점 센텀시티점</div>
+                        <div>부산광역시 해운대구 센텀남대로 35</div>
+                        <button class="copy-btn" onclick="copyAddress('부산광역시 해운대구 센텀남대로 35')">📋 复制地址</button>
+                    </div>
+                    <div class="transport-info">
+                        <div class="transport-card taxi">
+                            <strong>🚗 打车</strong>
+                            30-35 分钟 | 33,000₩
+                        </div>
+                        <div class="transport-card public">
+                            <strong>🚌 公交 + 地铁</strong>
+                            65-75 分钟 | 1,800₩
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 右侧地图 -->
+        <div class="map-container">
+            <div id="map"></div>
+            
+            <div class="map-overlay">
+                <h3>🗺️ 图例</h3>
+                <div class="legend-item">
+                    <div class="legend-dot airport"></div>
+                    <span>✈️ 金海机场</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot main"></div>
+                    <span>📍 主要景点</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot cafe"></div>
+                    <span>☕ 推荐咖啡厅</span>
+                </div>
+                <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
+                <p style="font-size: 11px; color: #666;">
+                    💡 点击左侧行程或咖啡厅，地图会自动定位
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // 初始化地图（以釜山为中心）
+        const map = L.map('map').setView([35.1200, 129.0200], 11);
+        
+        // 添加 OpenStreetMap 底图
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 18
+        }).addTo(map);
+        
+        // 自定义图标
+        const createIcon = (type) => {
+            const colors = {
+                main: '#667eea',
+                cafe: '#f093fb',
+                airport: '#4ecdc4'
+            };
+            
+            return L.divIcon({
+                className: 'custom-marker ' + type,
+                html: type === 'airport' ? '✈️' : (type === 'cafe' ? '☕' : '📍'),
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        };
+        
+        // 主要景点标记
+        const locations = [
+            { lat: 35.1796, lng: 128.9330, name: '金海机场', type: 'airport', desc: '行程起点' },
+            { lat: 35.1796, lng: 128.9330, name: '新世界 Centum City', type: 'main', desc: '放行李/住宿' },
+            { lat: 35.0947, lng: 129.0258, name: '甘川文化村', type: 'main', desc: '彩色村落，14:00-15:30' },
+            { lat: 35.1000, lng: 129.0350, name: '南浦洞樱花街', type: 'main', desc: '光复路樱花道，15:50-16:40' },
+            { lat: 35.0850, lng: 129.0580, name: '白浅滩文化村', type: 'main', desc: '日落必去，17:00-18:00' }
+        ];
+        
+        // 咖啡厅标记
+        const cafes = [
+            { lat: 35.0940, lng: 129.0250, name: 'Cafe 383', area: '甘川文化村', desc: '露台俯瞰彩色村落 + 海景' },
+            { lat: 35.0945, lng: 129.0255, name: '天空花园', area: '甘川文化村', desc: '全景窗，ins 风' },
+            { lat: 35.0938, lng: 129.0248, name: 'Coffee It House', area: '甘川文化村', desc: '粉色建筑，屋顶全景' },
+            { lat: 35.1005, lng: 129.0355, name: 'Cafe Layered', area: '南浦洞', desc: '工业风 + 樱花窗' },
+            { lat: 35.1002, lng: 129.0348, name: 'Cafe Moment', area: '南浦洞', desc: '安静小众，樱花街景' },
+            { lat: 35.0998, lng: 129.0360, name: '75 广场海景咖啡', area: '南浦洞', desc: '樱花 + 釜山港大桥同框' },
+            { lat: 35.0855, lng: 129.0585, name: 'Having Moment', area: '白浅滩', desc: '落地窗无敌海景' },
+            { lat: 35.0858, lng: 129.0588, name: 'Ondata', area: '白浅滩', desc: '3 楼露台，看海超开阔' },
+            { lat: 35.0852, lng: 129.0582, name: '足浴咖啡', area: '白浅滩', desc: '边泡脚边看日落' }
+        ];
+        
+        // 添加主要景点标记
+        locations.forEach((loc, index) => {
+            const marker = L.marker([loc.lat, loc.lng], {
+                icon: createIcon(loc.type)
+            }).addTo(map);
+            
+            marker.bindPopup(`
+                <div class="popup-content">
+                    <h4>${loc.name}</h4>
+                    <p>${loc.desc}</p>
+                </div>
+            `);
+        });
+        
+        // 添加咖啡厅标记
+        cafes.forEach(cafe => {
+            const marker = L.marker([cafe.lat, cafe.lng], {
+                icon: createIcon('cafe')
+            }).addTo(map);
+            
+            marker.bindPopup(`
+                <div class="popup-content">
+                    <h4>☕ ${cafe.name}</h4>
+                    <p><strong>区域：</strong>${cafe.area}</p>
+                    <p>${cafe.desc}</p>
+                </div>
+            `);
+        });
+        
+        // 绘制路线（简单连接主要景点）
+        const routePoints = [
+            [35.1796, 128.9330], // 机场/新世界
+            [35.0947, 129.0258], // 甘川
+            [35.1000, 129.0350], // 南浦洞
+            [35.0850, 129.0580], // 白浅滩
+            [35.1796, 128.9330]  // 返回新世界
+        ];
+        
+        const polyline = L.polyline(routePoints, {
+            color: '#667eea',
+            weight: 4,
+            opacity: 0.7,
+            dashArray: '10, 10'
+        }).addTo(map);
+        
+        // 点击左侧行程项，地图定位
+        document.querySelectorAll('.timeline-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const lat = parseFloat(this.dataset.lat);
+                const lng = parseFloat(this.dataset.lng);
+                
+                map.flyTo([lat, lng], 14, {
+                    duration: 1.5
+                });
+                
+                // 移除其他 active 类
+                document.querySelectorAll('.timeline-item').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+        
+        // 点击咖啡厅，地图定位
+        document.querySelectorAll('.cafe-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const lat = parseFloat(this.dataset.lat);
+                const lng = parseFloat(this.dataset.lng);
+                
+                map.flyTo([lat, lng], 16, {
+                    duration: 1.5
+                });
+            });
+        });
+        
+        // 复制地址功能
+        function copyAddress(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 地址已复制到剪贴板！\n' + text);
+            }).catch(err => {
+                alert('❌ 复制失败，请手动复制');
+            });
+        }
+        
+        // 自动聚焦第一个景点
+        setTimeout(() => {
+            map.flyTo([35.1796, 128.9330], 12, {
+                duration: 1
+            });
+        }, 500);
+    </script>
+</body>
+</html>
